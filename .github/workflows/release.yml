@@ -1,0 +1,52 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & Publish Release
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode.app
+          swift --version
+
+      - name: Run Unit Tests
+        run: swift test
+
+      - name: Build & Package DMG and ZIP
+        run: |
+          chmod +x build.sh package.sh
+          ./package.sh
+
+      - name: Prepare Versioned Artifacts
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          cd dist
+          cp DeepUninstall.dmg "DeepUninstall-${VERSION}.dmg"
+          cp DeepUninstall.zip "DeepUninstall-${VERSION}.zip"
+          shasum -a 256 "DeepUninstall-${VERSION}.dmg" "DeepUninstall-${VERSION}.zip" > checksums.txt
+          ls -lh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "DeepUninstall ${{ github.ref_name }}"
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: |
+            dist/DeepUninstall-${{ github.ref_name }}.dmg
+            dist/DeepUninstall-${{ github.ref_name }}.zip
+            dist/checksums.txt
