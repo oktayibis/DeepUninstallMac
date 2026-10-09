@@ -11,15 +11,21 @@ permissions:
 jobs:
   build-and-release:
     name: Build & Publish Release
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Select Xcode
+      - name: Select Xcode 16 (Swift 6)
         run: |
-          sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode.app
+          for xcode in /Applications/Xcode_16*.app /Applications/Xcode.app; do
+            if [ -d "$xcode" ]; then
+              echo "Selecting $xcode"
+              sudo xcode-select -s "$xcode"
+              break
+            fi
+          done
           swift --version
 
       - name: Run Unit Tests
